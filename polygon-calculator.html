@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Polygon Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#080c14; --surface:#0d1422; --panel:#111927; --border:#1e2d42;
+  --accent:#00d4ff; --accent2:#ff6b35; --green:#00ff88; --purple:#b06aff;
+  --text:#c8d8e8; --muted:#4a6580; --grid:rgba(0,212,255,0.04);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Space Mono',monospace;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px),linear-gradient(rgba(0,212,255,.012) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.012) 1px,transparent 1px);
+  background-size:100px 100px,100px 100px,20px 20px,20px 20px;pointer-events:none;z-index:0;}
+.wrap{position:relative;z-index:1;max-width:1360px;margin:0 auto;padding:28px 18px;}
+
+/* HEADER */
+header{text-align:center;margin-bottom:26px;animation:fadeDown .6s ease both;}
+header .lbl{font-size:10px;letter-spacing:6px;color:var(--accent);text-transform:uppercase;margin-bottom:8px;}
+header h1{font-family:'Syne',sans-serif;font-size:clamp(1.7rem,4vw,2.9rem);font-weight:800;
+  background:linear-gradient(120deg,#fff 0%,var(--accent) 55%,var(--accent2) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+
+/* MODE SWITCHER */
+.mode-sw{display:flex;justify-content:center;margin-bottom:28px;animation:fadeDown .6s .1s ease both;opacity:0;animation-fill-mode:forwards;}
+.mode-track{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:50px;padding:4px;gap:4px;}
+.mode-btn{padding:10px 26px;border-radius:50px;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;cursor:pointer;border:none;background:transparent;color:var(--muted);transition:all .3s;}
+.mode-btn.m2d{background:linear-gradient(135deg,var(--accent),#0099bb);color:#000;box-shadow:0 0 22px rgba(0,212,255,.35);}
+.mode-btn.m3d{background:linear-gradient(135deg,var(--purple),#7c3aed);color:#fff;box-shadow:0 0 22px rgba(176,106,255,.35);}
+.mode-btn:not(.m2d):not(.m3d):hover{color:var(--text);}
+
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:320px 1fr;gap:20px;align-items:start;}
+@media(max-width:820px){.layout{grid-template-columns:1fr;}}
+
+/* PANEL */
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;animation:fadeUp .6s ease both;}
+.ph{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px;background:var(--surface);}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;animation:pulse 2s infinite;}
+.dc{background:var(--accent);box-shadow:0 0 8px var(--accent);}
+.dp{background:var(--purple);box-shadow:0 0 8px var(--purple);}
+.do{background:var(--accent2);box-shadow:0 0 8px var(--accent2);}
+.ph h2{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#fff;}
+.pb{padding:18px;}
+
+/* VERTEX LIST */
+.vlist{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-height:320px;overflow-y:auto;padding-right:3px;}
+.vlist::-webkit-scrollbar{width:3px;}.vlist::-webkit-scrollbar-thumb{background:var(--accent);border-radius:2px;}
+.vrow{display:flex;align-items:center;gap:6px;animation:slideIn .22s ease both;}
+.vlbl{font-size:10px;color:var(--accent);letter-spacing:1px;min-width:20px;text-align:center;font-weight:700;}
+.coords{display:flex;gap:4px;flex:1;}
+.cw{position:relative;flex:1;}
+.cw span{position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--muted);pointer-events:none;}
+.cw input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);
+  font-family:'Space Mono',monospace;font-size:12px;padding:7px 7px 7px 24px;outline:none;transition:border-color .2s,box-shadow .2s;}
+.cw input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,212,255,.1);}
+.cw input::-webkit-outer-spin-button,.cw input::-webkit-inner-spin-button{-webkit-appearance:none;}
+.rm{background:none;border:1px solid rgba(255,107,53,.25);color:var(--accent2);border-radius:5px;width:26px;height:26px;
+  cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;}
+.rm:hover{background:rgba(255,107,53,.15);border-color:var(--accent2);}
+
+/* 3D SHAPE INPUTS */
+.ssec{margin-bottom:13px;}
+.ssec label,.dim label{display:block;font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
+.ssec select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);
+  font-family:'Space Mono',monospace;font-size:12px;padding:9px 11px;outline:none;cursor:pointer;transition:border-color .2s;}
+.ssec select:focus{border-color:var(--purple);}
+.dims{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+.dim input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);
+  font-family:'Space Mono',monospace;font-size:12px;padding:8px 11px;outline:none;transition:border-color .2s,box-shadow .2s;}
+.dim input:focus{border-color:var(--purple);box-shadow:0 0 0 2px rgba(176,106,255,.1);}
+.dim input::-webkit-outer-spin-button,.dim input::-webkit-inner-spin-button{-webkit-appearance:none;}
+
+/* BUTTONS */
+.acts{display:flex;flex-direction:column;gap:8px;}
+.btn{width:100%;padding:10px;border-radius:7px;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s;outline:none;border:none;}
+.badd{background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.25)!important;color:var(--accent);}
+.badd:hover{background:rgba(0,212,255,.14);}
+.bc2{background:linear-gradient(135deg,var(--accent),#0099bb);color:#000;box-shadow:0 4px 16px rgba(0,212,255,.25);}
+.bc2:hover{transform:translateY(-1px);box-shadow:0 7px 24px rgba(0,212,255,.38);}
+.bc3{background:linear-gradient(135deg,var(--purple),#7c3aed);color:#fff;box-shadow:0 4px 16px rgba(176,106,255,.25);}
+.bc3:hover{transform:translateY(-1px);box-shadow:0 7px 24px rgba(176,106,255,.38);}
+.btn:active{transform:translateY(0)!important;}
+.brst{background:none;border:1px solid var(--border)!important;color:var(--muted);}
+.brst:hover{border-color:var(--muted)!important;color:var(--text);}
+
+/* RESULT BOX — BUG FIX: no overflow */
+.rbox{margin-top:13px;padding:14px;background:var(--bg);border-radius:8px;display:none;animation:fadeUp .3s ease;}
+.rbox.r2{border:1px solid rgba(0,255,136,.28);}
+.rbox.r3{border:1px solid rgba(176,106,255,.28);}
+.rbox.on{display:block;}
+.rlbl{font-size:9px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:5px;}
+/* KEY FIX: clamp font-size + allow wrapping so big numbers never overflow */
+.rval{font-family:'Syne',sans-serif;font-weight:800;line-height:1.1;
+  font-size:clamp(1.1rem,5vw,2rem);word-break:break-all;overflow-wrap:anywhere;}
+.rv2{color:var(--green);text-shadow:0 0 16px rgba(0,255,136,.35);}
+.rv3{color:var(--purple);text-shadow:0 0 16px rgba(176,106,255,.35);}
+.runit{font-size:10px;color:var(--muted);margin-top:5px;}
+.rfml{font-size:10px;color:rgba(176,106,255,.75);margin-top:3px;}
+
+.errmsg{margin-top:9px;padding:8px 12px;background:rgba(255,107,53,.09);border:1px solid rgba(255,107,53,.28);
+  border-radius:6px;font-size:11px;color:var(--accent2);display:none;}
+.errmsg.on{display:block;}
+
+/* CANVAS PANEL */
+.cpanel{animation:fadeUp .6s .1s ease both;}
+.cw-outer{position:relative;}
+canvas#pc{display:block;width:100%;border-radius:0;background:var(--bg);cursor:grab;touch-action:none;}
+canvas#pc:active{cursor:grabbing;}
+
+/* ZOOM CONTROLS */
+.zoom-bar{position:absolute;top:10px;right:10px;display:flex;flex-direction:column;gap:4px;z-index:10;}
+.zb{background:rgba(13,20,34,.88);border:1px solid var(--border);color:var(--text);width:30px;height:30px;
+  border-radius:6px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .2s;font-family:'Space Mono',monospace;font-weight:700;}
+.zb:hover{border-color:var(--accent);color:var(--accent);box-shadow:0 0 10px rgba(0,212,255,.2);}
+.zb.fit{font-size:11px;}
+
+.cempty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  pointer-events:none;gap:11px;}
+.cempty svg{width:46px;height:46px;opacity:.15;}
+.cempty p{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);opacity:.45;}
+
+/* 3D no-viz */
+.noviz{padding:55px 28px;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;}
+.noviz .ni{font-size:38px;opacity:.18;}
+.noviz p{font-size:11px;color:var(--muted);letter-spacing:1px;line-height:1.9;}
+
+/* STATS BAR */
+.sbar{display:flex;gap:12px;padding:12px 18px;border-top:1px solid var(--border);background:var(--surface);flex-wrap:wrap;}
+.st{display:flex;flex-direction:column;gap:2px;}
+.slbl{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+.sv{font-size:12px;font-weight:700;}
+.sc{color:var(--accent);}.sp{color:var(--purple);}
+.bdg{margin-left:auto;font-size:10px;padding:2px 8px;border-radius:20px;letter-spacing:1px;}
+.b2{background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);color:var(--accent);}
+.b3{background:rgba(176,106,255,.1);border:1px solid rgba(176,106,255,.2);color:var(--purple);}
+
+.hi{display:none!important;}
+
+@keyframes fadeDown{from{opacity:0;transform:translateY(-18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideIn{from{opacity:0;transform:translateX(-7px)}to{opacity:1;transform:translateX(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="lbl">// geometric analysis tool</div>
+    <h1>Polygon Calculator</h1>
+  </header>
+
+  <div class="mode-sw">
+    <div class="mode-track">
+      <button class="mode-btn m2d" id="btn2d" onclick="setMode('2d')">◻ 2D — Area</button>
+      <button class="mode-btn"     id="btn3d" onclick="setMode('3d')">⬡ 3D — Volume</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- LEFT -->
+    <div class="panel">
+      <div class="ph" id="ph2d"><div class="dot dc"></div><h2>Vertices</h2><span class="bdg b2" id="vcnt">4 pts</span></div>
+      <div class="ph hi" id="ph3d"><div class="dot dp"></div><h2>Shape Dimensions</h2><span class="bdg b3">3D</span></div>
+      <div class="pb">
+
+        <!-- 2D controls -->
+        <div id="c2d">
+          <div class="vlist" id="vlist"></div>
+          <div class="acts">
+            <button class="btn badd" onclick="addVert()">+ Add Vertex</button>
+            <button class="btn bc2"  onclick="calc2d()">▶ Calculate Area</button>
+            <button class="btn brst" onclick="resetAll()">↺ Reset</button>
+          </div>
+        </div>
+
+        <!-- 3D controls -->
+        <div id="c3d" class="hi">
+          <div class="ssec">
+            <label>Shape Type</label>
+            <select id="stype" onchange="onShapeChange()">
+              <option value="cube">Cube</option>
+              <option value="cuboid">Rectangular Prism (Cuboid)</option>
+              <option value="sphere">Sphere</option>
+              <option value="cylinder">Cylinder</option>
+              <option value="cone">Cone</option>
+              <option value="pyramid_sq">Square Pyramid</option>
+              <option value="pyramid_tri">Regular Tetrahedron</option>
+              <option value="ellipsoid">Ellipsoid</option>
+              <option value="torus">Torus</option>
+              <option value="custom">Custom (Enter X,Y,Z Vertices)</option>
+            </select>
+          </div>
+          <!-- Preset dims -->
+          <div class="dims" id="pdims"></div>
+          <!-- Custom 3D vertex list -->
+          <div id="cust3d" class="hi">
+            <div class="vlist" id="vlist3d"></div>
+            <button class="btn badd" style="margin-bottom:10px;border-color:rgba(176,106,255,.3)!important;color:var(--purple);" onclick="addVert3d()">+ Add Vertex</button>
+          </div>
+          <div class="acts">
+            <button class="btn bc3" onclick="calc3d()">▶ Calculate Volume</button>
+            <button class="btn brst" onclick="resetAll()">↺ Reset</button>
+          </div>
+        </div>
+
+        <div class="errmsg" id="errmsg"></div>
+
+        <div class="rbox r2" id="rb2">
+          <div class="rlbl">// Computed Area</div>
+          <div class="rval rv2" id="rv2">0</div>
+          <div class="runit">square units</div>
+        </div>
+        <div class="rbox r3" id="rb3">
+          <div class="rlbl">// Computed Volume</div>
+          <div class="rval rv3" id="rv3">0</div>
+          <div class="runit">cubic units</div>
+          <div class="rfml" id="rfml"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="panel cpanel">
+      <div class="ph"><div class="dot do"></div><h2 id="vtitle">Visualization</h2></div>
+
+      <!-- 2D canvas -->
+      <div id="v2d">
+        <div class="cw-outer">
+          <canvas id="pc"></canvas>
+          <!-- Zoom controls -->
+          <div class="zoom-bar">
+            <button class="zb" onclick="zoomBtn(1.25)" title="Zoom In">+</button>
+            <button class="zb" onclick="zoomBtn(0.8)"  title="Zoom Out">−</button>
+            <button class="zb fit" onclick="fitView()" title="Fit to shape">⊡</button>
+          </div>
+          <div class="cempty" id="cempty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+              <polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5" stroke="rgba(0,212,255,.5)"/>
+            </svg>
+            <p>Enter coordinates and calculate</p>
+          </div>
+        </div>
+        <div class="sbar">
+          <div class="st"><div class="slbl">Vertices</div><div class="sv sc" id="s2v">—</div></div>
+          <div class="st"><div class="slbl">Perimeter</div><div class="sv sc" id="s2p">—</div></div>
+          <div class="st"><div class="slbl">Centroid X</div><div class="sv sc" id="s2cx">—</div></div>
+          <div class="st"><div class="slbl">Centroid Y</div><div class="sv sc" id="s2cy">—</div></div>
+          <div class="st"><div class="slbl">Area</div><div class="sv sc" id="s2a">—</div></div>
+        </div>
+      </div>
+
+      <!-- 3D -->
+      <div id="v3d" class="hi">
+        <div class="noviz" style="display:flex">
+          <div class="ni">⬡</div>
+          <p>3D visualization is not available.<br>Select a shape &amp; enter dimensions,<br>then click <strong style="color:var(--purple)">Calculate Volume</strong>.</p>
+        </div>
+        <div class="sbar" id="sbar3d" style="display:none">
+          <div class="st"><div class="slbl">Shape</div><div class="sv sp" id="s3s">—</div></div>
+          <div class="st"><div class="slbl">Volume</div><div class="sv sp" id="s3v">—</div></div>
+          <div class="st"><div class="slbl">Surface Area</div><div class="sv sp" id="s3sa">—</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+const ABC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+let mode      = '2d';
+let verts2d   = [{x:'',y:''},{x:'',y:''},{x:'',y:''},{x:'',y:''}];
+let verts3d   = [{x:'',y:'',z:''},{x:'',y:'',z:''},{x:'',y:'',z:''},{x:'',y:'',z:''}];
+let lastPts   = null;
+let lastArea  = 0;
+
+// Camera for 2D canvas (world coords)
+const cam = { cx:0, cy:0, zoom:50 };
+
+// Interaction
+let isDrag = false, dragStart = null, dragCamStart = null;
+let lastTouchDist = null;
+
+// ═══════════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════════
+function fmt(n, dp=4) {
+  if (n===null||n===undefined||isNaN(n)) return 'N/A';
+  const r = parseFloat(n.toFixed(dp));
+  return r.toString();
+}
+function showErr(m){ const e=document.getElementById('errmsg'); e.textContent=m; e.classList.add('on'); }
+function hideErr(){ document.getElementById('errmsg').classList.remove('on'); }
+function show(id,v){ document.getElementById(id).classList.toggle('hi',!v); }
+
+// ═══════════════════════════════════════════════════════════════
+// MODE
+// ═══════════════════════════════════════════════════════════════
+function setMode(m) {
+  mode = m;
+  const is2 = m==='2d';
+  document.getElementById('btn2d').className = 'mode-btn '+(is2?'m2d':'');
+  document.getElementById('btn3d').className = 'mode-btn '+(!is2?'m3d':'');
+  show('ph2d', is2); show('ph3d', !is2);
+  show('c2d',  is2); show('c3d',  !is2);
+  show('v2d',  is2); show('v3d',  !is2);
+  document.getElementById('rb2').classList.remove('on');
+  document.getElementById('rb3').classList.remove('on');
+  hideErr();
+  if (!is2) { clearStats2d(); clearCanvas(); lastPts=null; onShapeChange(); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 2D VERTICES
+// ═══════════════════════════════════════════════════════════════
+function renderVerts() {
+  const list = document.getElementById('vlist');
+  list.innerHTML = '';
+  verts2d.forEach((v,i) => {
+    const d = document.createElement('div'); d.className='vrow';
+    d.innerHTML = `
+      <div class="vlbl">${ABC[i]||i+1}</div>
+      <div class="coords">
+        <div class="cw"><span>X</span><input type="number" value="${v.x}" placeholder="0" step="any" oninput="verts2d[${i}].x=this.value"></div>
+        <div class="cw"><span>Y</span><input type="number" value="${v.y}" placeholder="0" step="any" oninput="verts2d[${i}].y=this.value"></div>
+      </div>
+      ${verts2d.length>3 ? `<button class="rm" onclick="removeVert(${i})">×</button>` : '<div style="width:26px"></div>'}`;
+    list.appendChild(d);
+  });
+  document.getElementById('vcnt').textContent = verts2d.length+' pts';
+}
+
+function addVert() {
+  if (verts2d.length>=20) return;
+  verts2d.push({x:'',y:''});
+  renderVerts();
+  setTimeout(()=>{ const l=document.getElementById('vlist'); l.scrollTop=l.scrollHeight; },60);
+}
+function removeVert(i) {
+  if (verts2d.length<=3) return;
+  verts2d.splice(i,1); renderVerts();
+}
+
+function calc2d() {
+  hideErr();
+  const rows = document.querySelectorAll('#vlist .vrow');
+  const pts = [];
+  for (let i=0;i<rows.length;i++) {
+    const ins = rows[i].querySelectorAll('input');
+    const x=parseFloat(ins[0].value), y=parseFloat(ins[1].value);
+    if (isNaN(x)||isNaN(y)) { showErr(`⚠ Vertex ${ABC[i]} has invalid coordinates.`); return; }
+    pts.push({x,y});
+  }
+  if (pts.length<3) { showErr('⚠ Need at least 3 vertices.'); return; }
+
+  const n=pts.length;
+  let area=0;
+  for (let i=0;i<n;i++) { const j=(i+1)%n; area+=pts[i].x*pts[j].y - pts[j].x*pts[i].y; }
+  area=Math.abs(area)/2;
+
+  let perim=0;
+  for (let i=0;i<n;i++) { const j=(i+1)%n, dx=pts[j].x-pts[i].x, dy=pts[j].y-pts[i].y; perim+=Math.sqrt(dx*dx+dy*dy); }
+
+  let cx=0,cy=0;
+  pts.forEach(p=>{cx+=p.x;cy+=p.y;}); cx/=n; cy/=n;
+
+  document.getElementById('rv2').textContent = fmt(area);
+  document.getElementById('rb2').classList.add('on');
+  document.getElementById('s2v').textContent  = n;
+  document.getElementById('s2p').textContent  = fmt(perim);
+  document.getElementById('s2cx').textContent = fmt(cx);
+  document.getElementById('s2cy').textContent = fmt(cy);
+  document.getElementById('s2a').textContent  = fmt(area);
+
+  document.getElementById('cempty').style.display='none';
+  lastPts=pts; lastArea=area;
+  fitView();
+}
+
+function clearStats2d() {
+  ['s2v','s2p','s2cx','s2cy','s2a'].forEach(id=>document.getElementById(id).textContent='—');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 3D PRESET SHAPES
+// ═══════════════════════════════════════════════════════════════
+const SHAPES = {
+  cube:       {lbl:'Cube',              dims:[{id:'a', lbl:'Side Length (a)'}]},
+  cuboid:     {lbl:'Cuboid',            dims:[{id:'l',lbl:'Length (l)'},{id:'w',lbl:'Width (w)'},{id:'h',lbl:'Height (h)'}]},
+  sphere:     {lbl:'Sphere',            dims:[{id:'r', lbl:'Radius (r)'}]},
+  cylinder:   {lbl:'Cylinder',          dims:[{id:'r', lbl:'Radius (r)'},{id:'h',lbl:'Height (h)'}]},
+  cone:       {lbl:'Cone',              dims:[{id:'r', lbl:'Radius (r)'},{id:'h',lbl:'Height (h)'}]},
+  pyramid_sq: {lbl:'Square Pyramid',    dims:[{id:'b', lbl:'Base Side (b)'},{id:'h',lbl:'Height (h)'}]},
+  pyramid_tri:{lbl:'Reg. Tetrahedron',  dims:[{id:'a', lbl:'Edge Length (a)'}]},
+  ellipsoid:  {lbl:'Ellipsoid',         dims:[{id:'a', lbl:'Semi-axis a'},{id:'b2',lbl:'Semi-axis b'},{id:'c',lbl:'Semi-axis c'}]},
+  torus:      {lbl:'Torus',             dims:[{id:'R', lbl:'Major Radius (R)'},{id:'r2',lbl:'Minor Radius (r)'}]},
+  custom:     {lbl:'Custom',            dims:[]},
+};
+
+function onShapeChange() {
+  const type = document.getElementById('stype').value;
+  const def  = SHAPES[type];
+  const isCustom = type==='custom';
+
+  show('pdims',  !isCustom);
+  show('cust3d', isCustom);
+
+  if (!isCustom) {
+    const cont = document.getElementById('pdims');
+    cont.innerHTML='';
+    def.dims.forEach(d=>{
+      const row=document.createElement('div'); row.className='dim';
+      row.innerHTML=`<label>${d.lbl}</label><input type="number" id="d_${d.id}" placeholder="Enter value" step="any" min="0">`;
+      cont.appendChild(row);
+    });
+  } else {
+    renderVerts3d();
+  }
+  hideErr();
+  document.getElementById('rb3').classList.remove('on');
+  document.getElementById('sbar3d').style.display='none';
+}
+
+function gd(id) { const e=document.getElementById('d_'+id); return e?parseFloat(e.value):NaN; }
+
+// ═══════════════════════════════════════════════════════════════
+// 3D CUSTOM VERTICES
+// ═══════════════════════════════════════════════════════════════
+function renderVerts3d() {
+  const list = document.getElementById('vlist3d');
+  list.innerHTML='';
+  verts3d.forEach((v,i)=>{
+    const d=document.createElement('div'); d.className='vrow';
+    d.innerHTML=`
+      <div class="vlbl">${ABC[i]||i+1}</div>
+      <div class="coords" style="gap:3px">
+        <div class="cw"><span>X</span><input type="number" value="${v.x}" placeholder="0" step="any" oninput="verts3d[${i}].x=this.value"></div>
+        <div class="cw"><span>Y</span><input type="number" value="${v.y}" placeholder="0" step="any" oninput="verts3d[${i}].y=this.value"></div>
+        <div class="cw"><span>Z</span><input type="number" value="${v.z}" placeholder="0" step="any" oninput="verts3d[${i}].z=this.value"></div>
+      </div>
+      ${verts3d.length>4?`<button class="rm" onclick="removeVert3d(${i})">×</button>`:'<div style="width:26px"></div>'}`;
+    list.appendChild(d);
+  });
+}
+function addVert3d() {
+  if (verts3d.length>=20) return;
+  verts3d.push({x:'',y:'',z:''});
+  renderVerts3d();
+  setTimeout(()=>{ const l=document.getElementById('vlist3d'); l.scrollTop=l.scrollHeight; },60);
+}
+function removeVert3d(i) {
+  if (verts3d.length<=4) return;
+  verts3d.splice(i,1); renderVerts3d();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 3D CONVEX HULL (Incremental algorithm)
+// ═══════════════════════════════════════════════════════════════
+function vec3(a,b) { return [b[0]-a[0],b[1]-a[1],b[2]-a[2]]; }
+function cross3(u,v) { return [u[1]*v[2]-u[2]*v[1], u[2]*v[0]-u[0]*v[2], u[0]*v[1]-u[1]*v[0]]; }
+function dot3(a,b)   { return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
+function norm3(v)    { return Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]); }
+function pt3(pts,i)  { return [pts[i].x, pts[i].y, pts[i].z]; }
+
+// signed orient: >0 means pt i is "above" face (a,b,c)
+function orient3(pts,a,b,c,i) {
+  const pa=pt3(pts,a), pb=pt3(pts,b), pc=pt3(pts,c), pi=pt3(pts,i);
+  const n=cross3(vec3(pa,pb), vec3(pa,pc));
+  return dot3(n, vec3(pa,pi));
+}
+
+function convexHull3D(pts) {
+  const n=pts.length;
+  if (n<4) return null;
+
+  // find 4 non-coplanar seed points
+  let s=[0,1,-1,-1];
+
+  // find s[2]: not collinear with s[0],s[1]
+  for (let i=2;i<n;i++) {
+    const u=vec3(pt3(pts,s[0]),pt3(pts,i));
+    const v=vec3(pt3(pts,s[0]),pt3(pts,s[1]));
+    const c=cross3(u,v);
+    if (norm3(c)>1e-10) { s[2]=i; break; }
+  }
+  if (s[2]===-1) return null; // collinear
+
+  // find s[3]: not coplanar with s[0],s[1],s[2]
+  for (let i=1;i<n;i++) {
+    if (i===s[0]||i===s[1]||i===s[2]) continue;
+    const o=orient3(pts,s[0],s[1],s[2],i);
+    if (Math.abs(o)>1e-10) { s[3]=i; break; }
+  }
+  if (s[3]===-1) return null; // coplanar
+
+  // build initial tetrahedron with consistent outward normals
+  const tFaces=[[s[0],s[1],s[2]],[s[0],s[2],s[3]],[s[0],s[3],s[1]],[s[1],s[3],s[2]]];
+  const faces=[];
+  for (const f of tFaces) {
+    const other=s.find(v=>!f.includes(v));
+    if (orient3(pts,f[0],f[1],f[2],other)>0)
+      faces.push([f[0],f[2],f[1]]); // flip
+    else
+      faces.push([...f]);
+  }
+
+  // process remaining points
+  const seeded=new Set(s);
+  for (let i=0;i<n;i++) {
+    if (seeded.has(i)) continue;
+
+    // find visible faces
+    const visMask=faces.map(f=>orient3(pts,f[0],f[1],f[2],i)>1e-10);
+    if (!visMask.some(Boolean)) continue;
+
+    // horizon edges: directed edge in visible face whose reverse is in non-visible face
+    const visEdges=new Set();
+    for (let fi=0;fi<faces.length;fi++) {
+      if (!visMask[fi]) continue;
+      const f=faces[fi];
+      visEdges.add(f[0]+','+f[1]); visEdges.add(f[1]+','+f[2]); visEdges.add(f[2]+','+f[0]);
+    }
+
+    const horizon=[];
+    for (let fi=0;fi<faces.length;fi++) {
+      if (!visMask[fi]) continue;
+      const f=faces[fi];
+      const edges=[[f[0],f[1]],[f[1],f[2]],[f[2],f[0]]];
+      for (const [a,b] of edges) {
+        if (!visEdges.has(b+','+a)) horizon.push([a,b]); // reverse not in visible → horizon
+      }
+    }
+
+    // remove visible faces (reverse to keep indices valid)
+    for (let fi=faces.length-1;fi>=0;fi--) if (visMask[fi]) faces.splice(fi,1);
+
+    // add new faces: reverse horizon edge + new point
+    for (const [a,b] of horizon) faces.push([b,a,i]);
+
+    seeded.add(i);
+  }
+  return faces;
+}
+
+// Volume via signed tetrahedra (divergence theorem)
+function volumeFromHull(pts, faces) {
+  let vol=0;
+  for (const [a,b,c] of faces) {
+    const pa=pt3(pts,a), pb=pt3(pts,b), pc=pt3(pts,c);
+    vol += pa[0]*(pb[1]*pc[2]-pb[2]*pc[1])
+         + pb[0]*(pc[1]*pa[2]-pc[2]*pa[1])
+         + pc[0]*(pa[1]*pb[2]-pa[2]*pb[1]);
+  }
+  return Math.abs(vol)/6;
+}
+
+// Surface area from hull faces
+function surfaceAreaFromHull(pts, faces) {
+  let sa=0;
+  for (const [a,b,c] of faces) {
+    const pa=pt3(pts,a), pb=pt3(pts,b), pc=pt3(pts,c);
+    const u=vec3(pa,pb), v=vec3(pa,pc);
+    const cr=cross3(u,v);
+    sa+=norm3(cr)/2;
+  }
+  return sa;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 3D CALCULATE
+// ═══════════════════════════════════════════════════════════════
+function calc3d() {
+  hideErr();
+  const type=document.getElementById('stype').value;
+  const PI=Math.PI;
+  let vol=NaN, sa=NaN, lbl='', formula='';
+
+  if (type==='custom') {
+    // read 3D vertices from DOM
+    const rows=document.querySelectorAll('#vlist3d .vrow');
+    const cpts=[];
+    for (let i=0;i<rows.length;i++) {
+      const ins=rows[i].querySelectorAll('input');
+      const x=parseFloat(ins[0].value), y=parseFloat(ins[1].value), z=parseFloat(ins[2].value);
+      if (isNaN(x)||isNaN(y)||isNaN(z)) { showErr(`⚠ Vertex ${ABC[i]} has invalid coordinates.`); return; }
+      cpts.push({x,y,z});
+    }
+    if (cpts.length<4) { showErr('⚠ Need at least 4 vertices for a 3D solid.'); return; }
+
+    const faces=convexHull3D(cpts);
+    if (!faces||faces.length===0) { showErr('⚠ Points appear to be coplanar or collinear. Volume = 0.'); return; }
+    vol = volumeFromHull(cpts, faces);
+    sa  = surfaceAreaFromHull(cpts, faces);
+    lbl = 'Custom Solid';
+    formula = `Convex hull of ${cpts.length} vertices`;
+  } else {
+    const def=SHAPES[type];
+    const v={};
+    for (const d of def.dims) {
+      const val=gd(d.id);
+      if (isNaN(val)||val<=0) { showErr(`⚠ Enter a valid positive value for "${d.lbl}".`); return; }
+      v[d.id]=val;
+    }
+    lbl=def.lbl;
+    switch(type) {
+      case 'cube':
+        vol=v.a**3; sa=6*v.a**2; formula=`V = a³ = ${fmt(v.a,2)}³`; break;
+      case 'cuboid':
+        vol=v.l*v.w*v.h; sa=2*(v.l*v.w+v.w*v.h+v.h*v.l); formula=`V = l×w×h`; break;
+      case 'sphere':
+        vol=(4/3)*PI*v.r**3; sa=4*PI*v.r**2; formula=`V = (4/3)πr³`; break;
+      case 'cylinder':
+        vol=PI*v.r**2*v.h; sa=2*PI*v.r*(v.r+v.h); formula=`V = πr²h`; break;
+      case 'cone':
+        vol=(1/3)*PI*v.r**2*v.h;
+        sa=PI*v.r*(v.r+Math.sqrt(v.r**2+v.h**2)); formula=`V = (1/3)πr²h`; break;
+      case 'pyramid_sq':
+        vol=(1/3)*v.b**2*v.h;
+        sa=v.b**2+2*v.b*Math.sqrt((v.b/2)**2+v.h**2); formula=`V = (1/3)b²h`; break;
+      case 'pyramid_tri':
+        vol=v.a**3/(6*Math.sqrt(2)); sa=Math.sqrt(3)*v.a**2; formula=`V = a³/(6√2)`; break;
+      case 'ellipsoid':
+        vol=(4/3)*PI*v.a*v.b2*v.c; formula=`V = (4/3)πabc`; break;
+      case 'torus':
+        vol=2*PI**2*v.R*v.r2**2;
+        sa=4*PI**2*v.R*v.r2; formula=`V = 2π²Rr²`; break;
+    }
+  }
+
+  document.getElementById('rv3').textContent  = fmt(vol);
+  document.getElementById('rfml').textContent = formula;
+  document.getElementById('rb3').classList.add('on');
+  document.getElementById('s3s').textContent  = lbl;
+  document.getElementById('s3v').textContent  = fmt(vol);
+  document.getElementById('s3sa').textContent = isNaN(sa)?'N/A':fmt(sa);
+  document.getElementById('sbar3d').style.display='flex';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RESET
+// ═══════════════════════════════════════════════════════════════
+function resetAll() {
+  hideErr();
+  document.getElementById('rb2').classList.remove('on');
+  document.getElementById('rb3').classList.remove('on');
+  document.getElementById('sbar3d').style.display='none';
+  clearStats2d(); clearCanvas(); lastPts=null; lastArea=0;
+  document.getElementById('cempty').style.display='flex';
+  if (mode==='2d') {
+    verts2d=[{x:'',y:''},{x:'',y:''},{x:'',y:''},{x:'',y:''}];
+    renderVerts();
+  } else {
+    verts3d=[{x:'',y:'',z:''},{x:'',y:'',z:''},{x:'',y:'',z:''},{x:'',y:'',z:''}];
+    onShapeChange();
+    if (document.getElementById('stype').value==='custom') renderVerts3d();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CANVAS — Zoom / Pan (Desmos-style)
+// ═══════════════════════════════════════════════════════════════
+function getCanvas() { return document.getElementById('pc'); }
+
+function syncCanvasSize() {
+  const c = getCanvas();
+  const w = c.parentElement.clientWidth;
+  const h = Math.round(w * 0.6);
+  if (c.width===w && c.height===h) return false;
+  c.width=w; c.height=h;
+  return true; // was resized (canvas cleared)
+}
+
+// World ↔ Canvas
+function w2c(wx,wy) {
+  const c=getCanvas();
+  return { cx: c.width/2  + (wx-cam.cx)*cam.zoom,
+           cy: c.height/2 - (wy-cam.cy)*cam.zoom };
+}
+function c2w(cx,cy) {
+  const c=getCanvas();
+  return { wx: cam.cx + (cx-c.width/2)/cam.zoom,
+           wy: cam.cy - (cy-c.height/2)/cam.zoom };
+}
+
+// Auto-fit view around polygon
+function fitView() {
+  if (!lastPts) return;
+  const c=getCanvas();
+  const xs=lastPts.map(p=>p.x), ys=lastPts.map(p=>p.y);
+  const minX=Math.min(...xs), maxX=Math.max(...xs);
+  const minY=Math.min(...ys), maxY=Math.max(...ys);
+  cam.cx=(minX+maxX)/2; cam.cy=(minY+maxY)/2;
+  const rX=maxX-minX||1, rY=maxY-minY||1;
+  cam.zoom=Math.min((c.width*0.72)/rX, (c.height*0.72)/rY);
+  redraw();
+}
+
+function zoomBtn(factor) {
+  cam.zoom*=factor;
+  redraw();
+}
+
+// Grid interval: nice number covering ~8 divisions
+function gridInterval() {
+  const worldW = getCanvas().width / cam.zoom;
+  const raw = worldW/8;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const n = raw/mag;
+  if (n<1.5) return mag;
+  if (n<3.5) return 2*mag;
+  if (n<7.5) return 5*mag;
+  return 10*mag;
+}
+
+function clearCanvas() {
+  const c=getCanvas(); c.getContext('2d').clearRect(0,0,c.width,c.height);
+}
+
+function redraw() {
+  if (lastPts) drawPolygon(lastPts, lastArea);
+  else clearCanvas();
+}
+
+function drawPolygon(pts, area) {
+  const c=getCanvas(), W=c.width, H=c.height;
+  const ctx=c.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+
+  // ── grid ──
+  const interval=gridInterval();
+  const topLeft=c2w(0,0), botRight=c2w(W,H);
+  const x0=Math.floor(topLeft.wx/interval)*interval;
+  const x1=Math.ceil(botRight.wx/interval)*interval;
+  const y0=Math.floor(botRight.wy/interval)*interval;
+  const y1=Math.ceil(topLeft.wy/interval)*interval;
+
+  // sub-grid (5x finer)
+  const subInt=interval/5;
+  ctx.strokeStyle='rgba(0,212,255,0.04)';
+  ctx.lineWidth=0.5;
+  for (let gx=Math.floor(topLeft.wx/subInt)*subInt; gx<=x1; gx+=subInt) {
+    const {cx}=w2c(gx,0); ctx.beginPath(); ctx.moveTo(cx,0); ctx.lineTo(cx,H); ctx.stroke();
+  }
+  for (let gy=Math.floor(botRight.wy/subInt)*subInt; gy<=y1; gy+=subInt) {
+    const {cy}=w2c(0,gy); ctx.beginPath(); ctx.moveTo(0,cy); ctx.lineTo(W,cy); ctx.stroke();
+  }
+
+  // main grid + coordinate labels
+  ctx.strokeStyle='rgba(0,212,255,0.09)';
+  ctx.lineWidth=1;
+  ctx.font='9px Space Mono,monospace';
+  ctx.fillStyle='rgba(0,212,255,0.45)';
+  ctx.textBaseline='top';
+
+  for (let gx=x0; gx<=x1+interval*0.01; gx+=interval) {
+    const {cx}=w2c(gx,0);
+    ctx.beginPath(); ctx.moveTo(cx,0); ctx.lineTo(cx,H); ctx.stroke();
+    // label near x-axis or top
+    const {cy: axisY}=w2c(0,0);
+    const labelY=Math.max(2, Math.min(H-14, axisY+3));
+    if (Math.abs(gx)>interval*0.01) { ctx.textAlign='center'; ctx.fillText(fmt(gx,2), cx, labelY); }
+  }
+  ctx.textBaseline='middle';
+  for (let gy=y0; gy<=y1+interval*0.01; gy+=interval) {
+    const {cy}=w2c(0,gy);
+    ctx.beginPath(); ctx.moveTo(0,cy); ctx.lineTo(W,cy); ctx.stroke();
+    const {cx: axisX}=w2c(0,0);
+    const labelX=Math.max(3, Math.min(W-28, axisX+3));
+    if (Math.abs(gy)>interval*0.01) { ctx.textAlign='left'; ctx.fillText(fmt(gy,2), labelX, cy); }
+  }
+
+  // ── axes ──
+  ctx.save();
+  ctx.setLineDash([5,6]);
+  ctx.strokeStyle='rgba(0,212,255,0.22)';
+  ctx.lineWidth=1;
+  const ax=w2c(0,0);
+  if (ax.cx>=0&&ax.cx<=W){ ctx.beginPath(); ctx.moveTo(ax.cx,0); ctx.lineTo(ax.cx,H); ctx.stroke(); }
+  if (ax.cy>=0&&ax.cy<=H){ ctx.beginPath(); ctx.moveTo(0,ax.cy); ctx.lineTo(W,ax.cy); ctx.stroke(); }
+  ctx.restore();
+
+  // origin label
+  ctx.font='9px Space Mono,monospace'; ctx.fillStyle='rgba(0,212,255,0.35)'; ctx.textAlign='left'; ctx.textBaseline='top';
+  if (ax.cx>=0&&ax.cx<=W&&ax.cy>=0&&ax.cy<=H) ctx.fillText('0',ax.cx+3,ax.cy+3);
+
+  const n=pts.length;
+  const mp=pts.map(p=>w2c(p.x,p.y));
+
+  // ── polygon fill ──
+  ctx.beginPath(); mp.forEach((p,i)=>i===0?ctx.moveTo(p.cx,p.cy):ctx.lineTo(p.cx,p.cy)); ctx.closePath();
+  const g=ctx.createLinearGradient(0,0,W,H);
+  g.addColorStop(0,'rgba(0,212,255,0.12)'); g.addColorStop(1,'rgba(0,153,200,0.04)');
+  ctx.fillStyle=g; ctx.fill();
+
+  // ── polygon stroke ──
+  ctx.beginPath(); mp.forEach((p,i)=>i===0?ctx.moveTo(p.cx,p.cy):ctx.lineTo(p.cx,p.cy)); ctx.closePath();
+  ctx.strokeStyle='#00d4ff'; ctx.lineWidth=2;
+  ctx.shadowColor='rgba(0,212,255,0.4)'; ctx.shadowBlur=9; ctx.stroke(); ctx.shadowBlur=0;
+
+  // ── edge length labels (only if zoom large enough) ──
+  if (cam.zoom > 0.3) {
+    ctx.save(); ctx.font='9px Space Mono,monospace'; ctx.fillStyle='rgba(0,212,255,0.7)';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    for (let i=0;i<n;i++) {
+      const j=(i+1)%n;
+      const mx=(mp[i].cx+mp[j].cx)/2, my=(mp[i].cy+mp[j].cy)/2;
+      const dx=pts[j].x-pts[i].x, dy=pts[j].y-pts[i].y;
+      const len=Math.sqrt(dx*dx+dy*dy);
+      const nx=-(mp[j].cy-mp[i].cy), ny=mp[j].cx-mp[i].cx;
+      const nl=Math.sqrt(nx*nx+ny*ny)||1;
+      ctx.fillText(fmt(len,2), mx+(nx/nl)*13, my+(ny/nl)*13);
+    }
+    ctx.restore();
+  }
+
+  // ── centroid for offset direction ──
+  let gcx=0,gcy=0; mp.forEach(p=>{gcx+=p.cx;gcy+=p.cy;}); gcx/=n; gcy/=n;
+
+  // ── vertex dots + labels ──
+  mp.forEach((p,i)=>{
+    // glow dot
+    ctx.save(); ctx.shadowColor='rgba(0,255,136,0.7)'; ctx.shadowBlur=12;
+    ctx.beginPath(); ctx.arc(p.cx,p.cy,5,0,Math.PI*2); ctx.fillStyle='#00ff88'; ctx.fill();
+    ctx.restore();
+    // ring
+    ctx.beginPath(); ctx.arc(p.cx,p.cy,9,0,Math.PI*2);
+    ctx.strokeStyle='rgba(0,255,136,0.28)'; ctx.lineWidth=1; ctx.stroke();
+
+    // coordinate label offset away from centroid
+    const ldx=p.cx-gcx, ldy=p.cy-gcy, ll=Math.sqrt(ldx*ldx+ldy*ldy)||1;
+    let lx=p.cx+(ldx/ll)*26, ly=p.cy+(ldy/ll)*26;
+    const txt=`${ABC[i]||i+1}(${fmt(pts[i].x,2)},${fmt(pts[i].y,2)})`;
+    ctx.font='9px Space Mono,monospace';
+    const tw=ctx.measureText(txt).width, bw=tw+10, bh=16;
+    lx=Math.max(bw/2+3, Math.min(W-bw/2-3,lx));
+    ly=Math.max(bh/2+3, Math.min(H-bh/2-3,ly));
+    ctx.fillStyle='rgba(6,10,18,0.9)'; ctx.fillRect(lx-bw/2,ly-bh/2,bw,bh);
+    ctx.strokeStyle='rgba(0,255,136,0.2)'; ctx.lineWidth=0.5; ctx.strokeRect(lx-bw/2,ly-bh/2,bw,bh);
+    ctx.fillStyle='#00ff88'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(txt,lx,ly);
+  });
+
+  // ── AREA BADGE: top-left, always visible ──
+  const aStr=`AREA = ${fmt(area)} sq units`;
+  ctx.font='bold 10px Space Mono,monospace';
+  const atw=ctx.measureText(aStr).width;
+  const bx=10,by=10,bw2=atw+14,bh2=20;
+  ctx.fillStyle='rgba(6,10,18,0.94)'; ctx.fillRect(bx,by,bw2,bh2);
+  ctx.strokeStyle='rgba(0,255,136,0.5)'; ctx.lineWidth=1; ctx.strokeRect(bx,by,bw2,bh2);
+  ctx.fillStyle='#00ff88'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(aStr, bx+bw2/2, by+bh2/2);
+
+  // ── Zoom level indicator ──
+  const zStr=`zoom: ${cam.zoom.toFixed(1)}px/u`;
+  ctx.font='8px Space Mono,monospace'; ctx.fillStyle='rgba(0,212,255,0.3)';
+  ctx.textAlign='right'; ctx.textBaseline='bottom';
+  ctx.fillText(zStr, W-8, H-6);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MOUSE / TOUCH EVENTS for pan + zoom
+// ═══════════════════════════════════════════════════════════════
+function canvasEl() { return document.getElementById('pc'); }
+
+// Mouse wheel → zoom centered on cursor
+canvasEl().addEventListener('wheel', e=>{
+  e.preventDefault();
+  const rect=canvasEl().getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  const wBefore=c2w(mx,my);
+  const factor=e.deltaY<0?1.12:0.89;
+  cam.zoom*=factor;
+  // keep mouse world point fixed
+  const wAfter=c2w(mx,my);
+  cam.cx-=(wAfter.wx-wBefore.wx);
+  cam.cy-=(wAfter.wy-wBefore.wy);
+  redraw();
+},{passive:false});
+
+// Drag to pan
+canvasEl().addEventListener('mousedown', e=>{
+  if (e.button!==0) return;
+  isDrag=true;
+  dragStart={x:e.clientX,y:e.clientY};
+  dragCamStart={cx:cam.cx,cy:cam.cy};
+});
+window.addEventListener('mousemove', e=>{
+  if (!isDrag) return;
+  const c=getCanvas();
+  const dx=e.clientX-dragStart.x, dy=e.clientY-dragStart.y;
+  cam.cx=dragCamStart.cx - dx/cam.zoom;
+  cam.cy=dragCamStart.cy + dy/cam.zoom;
+  redraw();
+});
+window.addEventListener('mouseup', ()=>{ isDrag=false; });
+
+// Touch: pan + pinch zoom
+canvasEl().addEventListener('touchstart', e=>{
+  if (e.touches.length===1) {
+    isDrag=true;
+    dragStart={x:e.touches[0].clientX, y:e.touches[0].clientY};
+    dragCamStart={cx:cam.cx,cy:cam.cy};
+    lastTouchDist=null;
+  } else if (e.touches.length===2) {
+    isDrag=false;
+    lastTouchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+    dragCamStart={cx:cam.cx,cy:cam.cy};
+  }
+},{passive:true});
+
+canvasEl().addEventListener('touchmove', e=>{
+  e.preventDefault();
+  if (e.touches.length===1 && isDrag) {
+    const dx=e.touches[0].clientX-dragStart.x, dy=e.touches[0].clientY-dragStart.y;
+    cam.cx=dragCamStart.cx-dx/cam.zoom;
+    cam.cy=dragCamStart.cy+dy/cam.zoom;
+    redraw();
+  } else if (e.touches.length===2 && lastTouchDist) {
+    const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+    // midpoint in canvas coords
+    const rect=canvasEl().getBoundingClientRect();
+    const mx=((e.touches[0].clientX+e.touches[1].clientX)/2)-rect.left;
+    const my=((e.touches[0].clientY+e.touches[1].clientY)/2)-rect.top;
+    const wBefore=c2w(mx,my);
+    cam.zoom*=d/lastTouchDist;
+    const wAfter=c2w(mx,my);
+    cam.cx-=(wAfter.wx-wBefore.wx);
+    cam.cy-=(wAfter.wy-wBefore.wy);
+    lastTouchDist=d;
+    redraw();
+  }
+},{passive:false});
+
+canvasEl().addEventListener('touchend', ()=>{ isDrag=false; lastTouchDist=null; });
+
+// ═══════════════════════════════════════════════════════════════
+// RESIZE
+// ═══════════════════════════════════════════════════════════════
+let rsTimer;
+window.addEventListener('resize', ()=>{
+  clearTimeout(rsTimer);
+  rsTimer=setTimeout(()=>{ const changed=syncCanvasSize(); if (changed) redraw(); },80);
+});
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+syncCanvasSize();
+renderVerts();
+onShapeChange();
+</script>
+</body>
+</html>
